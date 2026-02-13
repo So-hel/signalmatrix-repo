@@ -162,6 +162,5 @@ test_github.py
 test_openai.py
 test_openai_raw.py
 example_report.json
-.env
 .venv
 __pycache__/
