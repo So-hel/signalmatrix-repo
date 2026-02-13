@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignalMatrix Repo | GitHub Portfolio Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SignalMatrix Repo</h1>
+            <p>Where Recruiters See Beyond Commits</p>
+        </header>
+
+        <section class="input-section" id="inputSection">
+            <div class="form-group">
+                <label for="username">GitHub Username</label>
+                <input type="text" id="username" placeholder="e.g. torvalds" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="resume">Resume Text (Optional - for claim verification)</label>
+                <textarea id="resume" rows="5" placeholder="Paste resume text here..."></textarea>
+            </div>
+            <button id="analyzeBtn">Analyze Profile</button>
+        </section>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing signals, rule-based scoring, and AI reasoning in progress...</p>
+        </div>
+
+        <section class="report-section" id="reportSection">
+            <div class="report-card">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
+                    <div>
+                        <span id="scoreBadge" class="scoreBadge"></span>
+                        <h2 id="decisionLabel" style="display: inline; border: none;"></h2>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="color: var(--text-secondary);">Hiring Risk Index</p>
+                        <h3 id="riskLabel"></h3>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div>
+                        <h2>Executive Summary</h2>
+                        <p id="execSummary"></p>
+                    </div>
+                    <div>
+                        <h2>Recruiter Reasoning</h2>
+                        <p id="recruiterReasoning" style="font-style: italic;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="report-card">
+                    <h2>Signal Breakdown</h2>
+                    <ul id="breakdownList"></ul>
+                </div>
+                <div class="report-card">
+                    <h2>Strong Signals</h2>
+                    <ul id="strongSignals"></ul>
+                </div>
+            </div>
+
+            <div class="report-card red-flags">
+                <h2>Red Flags</h2>
+                <div id="redFlagsContent"></div>
+            </div>
+
+            <div class="grid">
+                <div class="report-card">
+                    <h2>Performance Benchmarks</h2>
+                    <p><strong>Complexity:</strong> <span id="complexityClass"></span></p>
+                    <p><strong>Maturity Trend:</strong> <span id="maturityTrend"></span></p>
+                    <p><strong>Collaboration Score:</strong> <span id="collabScore"></span></p>
+                    <p><strong>Benchmark Position:</strong> <span id="benchmarkPos"></span></p>
+                </div>
+                <div class="report-card">
+                    <h2>Resume Verification</h2>
+                    <p id="resumeVerification"></p>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <h2>30-Day Improvement Roadmap</h2>
+                <div id="roadmapContent" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <button onclick="window.location.reload()" style="background: var(--border-color);">New Analysis</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const username = document.getElementById('username').value.trim();
+            const resume_text = document.getElementById('resume').value.trim();
+
+            if (!username) {
+                alert('Please enter a GitHub username.');
+                return;
+            }
+
+            // UI State Change
+            document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, resume_text })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                renderReport(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('inputSection').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        function renderReport(data) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('reportSection').style.display = 'block';
+
+            // Score & Decision
+            const scoreBadge = document.getElementById('scoreBadge');
+            scoreBadge.innerText = data.overall_score;
+            scoreBadge.className = 'score-badge ' + 
+                (data.recruiter_decision === 'Strong Shortlist' ? 'strong' : 
+                 data.recruiter_decision === 'Borderline' ? 'borderline' : 'ready');
+            
+            document.getElementById('decisionLabel').innerText = data.recruiter_decision;
+            document.getElementById('riskLabel').innerText = data.hiring_risk;
+            document.getElementById('riskLabel').style.color = 
+                data.hiring_risk === 'High' ? 'var(--danger-color)' : 
+                data.hiring_risk === 'Medium' ? 'var(--warning-color)' : 'var(--success-color)';
+
+            // Summaries
+            document.getElementById('execSummary').innerText = data.executive_summary;
+            document.getElementById('recruiterReasoning').innerText = data.recruiter_reasoning;
+            document.getElementById('resumeVerification').innerText = data.resume_verification;
+
+            // Breakdown
+            const breakdownList = document.getElementById('breakdownList');
+            for (const [key, value] of Object.entries(data.signal_breakdown)) {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value}/10`;
+                breakdownList.appendChild(li);
+            }
+
+            // Signals
+            const strongSignals = document.getElementById('strongSignals');
+            data.strong_signals.forEach(s => {
+                const li = document.createElement('li');
+                li.innerText = s;
+                strongSignals.appendChild(li);
+            });
+
+            // Red Flags
+            const redFlagsDiv = document.getElementById('redFlagsContent');
+            ['critical', 'moderate', 'minor'].forEach(severity => {
+                if (data.red_flags[severity] && data.red_flags[severity].length > 0) {
+                    const h4 = document.createElement('h4');
+                    h4.innerText = severity.toUpperCase();
+                    h4.style.color = severity === 'critical' ? 'var(--danger-color)' : 'var(--warning-color)';
+                    redFlagsDiv.appendChild(h4);
+                    const ul = document.createElement('ul');
+                    data.red_flags[severity].forEach(f => {
+                        const li = document.createElement('li');
+                        li.innerText = f;
+                        ul.appendChild(li);
+                    });
+                    redFlagsDiv.appendChild(ul);
+                }
+            });
+
+            // Benchmarks
+            document.getElementById('complexityClass').innerText = data.complexity_classification;
+            document.getElementById('maturityTrend').innerText = data.maturity_trend;
+            document.getElementById('collabScore').innerText = data.collaboration_score + '/10';
+            document.getElementById('benchmarkPos').innerText = data.benchmark_position;
+
+            // Roadmap
+            const roadmapDiv = document.getElementById('roadmapContent');
+            if (data.improvement_roadmap) {
+                for (const [week, plan] of Object.entries(data.improvement_roadmap)) {
+                    const div = document.createElement('div');
+                    div.style.padding = '1rem';
+                    div.style.border = '1px solid var(--border-color)';
+                    div.style.borderRadius = '8px';
+                    div.innerHTML = `<h3>${week.toUpperCase()}</h3><p>${plan}</p>`;
+                    roadmapDiv.appendChild(div);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
