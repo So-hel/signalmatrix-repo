@@ -11,6 +11,9 @@ from .collector import GitHubCollector
 from .engine import ScoringEngine
 from .ai_reasoning import AIReasoningEngine
 from .report import ReportGenerator
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="SignalMatrix Repo")
 
@@ -29,6 +32,9 @@ async def read_root():
 @app.post("/api/analyze")
 async def analyze_profile(request: AnalysisRequest):
     try:
+        token = os.getenv("GITHUB_TOKEN")
+        print(f"DEBUG: main.py loaded GITHUB_TOKEN: {token[:4]}...{token[-4:] if token else 'None'}")
+        
         collector = GitHubCollector()
         
         # Layer 1: Data Collection
