@@ -1,39 +1,44 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
-import os
 import requests
+import logging
 
 from .collector import GitHubCollector
 from .engine import ScoringEngine
 from .ai_reasoning import AIReasoningEngine
 from .report import ReportGenerator
-from dotenv import load_dotenv
-
-load_dotenv()
+from .config import settings
 
 app = FastAPI(title="SignalMatrix Repo")
 
 # Static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 class AnalysisRequest(BaseModel):
-    username: str
+    # GitHub username validation: alphanumeric and hyphens, 1-39 chars
+    # Avoiding look-ahead as it's not supported by Pydantic's default regex engine
+    username: str = Field(..., min_length=1, max_length=39, pattern=r"^[a-zA-Z\d-]+$")
     resume_text: Optional[str] = ""
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    with open("app/static/index.html", "r") as f:
-        return f.read()
+    try:
+        with open("app/static/index.html", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Index file not found")
 
 @app.post("/api/analyze")
 async def analyze_profile(request: AnalysisRequest):
     try:
-        token = os.getenv("GITHUB_TOKEN")
-        print(f"DEBUG: main.py loaded GITHUB_TOKEN: {token[:4]}...{token[-4:] if token else 'None'}")
+        logger.info(f"Starting analysis for user: {request.username}")
         
         collector = GitHubCollector()
         
@@ -69,16 +74,17 @@ async def analyze_profile(request: AnalysisRequest):
         ai_sections = ai_engine.generate_report_sections(scoring_results, request.resume_text)
         
         # Layer 5: Report Generation
-        final_report = ReportGenerator.construct_final_report(scoring_results, ai_sections)
-        
-        return final_report
+        return ReportGenerator.construct_final_report(scoring_results, ai_sections)
         
     except requests.exceptions.HTTPError as e:
         status_code = e.response.status_code
-        detail = f"GitHub API Error ({status_code}): {e.response.text}"
+        logger.error(f"GitHub API Error ({status_code}) for user {request.username}: {e.response.text}")
+        detail = f"GitHub API Error: {status_code}"
         if status_code == 401:
-            detail = "Invalid GitHub Token. Please check your .env file."
+            detail = "Authentication failed. Please verify the GITHUB_TOKEN."
+        elif status_code == 404:
+            detail = f"GitHub user '{request.username}' not found."
         raise HTTPException(status_code=status_code, detail=detail)
     except Exception as e:
-        print(f"Error during analysis: {str(e)}") # Print to console for debugging
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unexpected error during analysis for user {request.username}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error during analysis")

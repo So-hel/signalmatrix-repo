@@ -1,19 +1,15 @@
-import os
 import json
 import requests
 from typing import Dict, Any
-from dotenv import load_dotenv
-
-load_dotenv()
+from .config import settings
 
 class AIReasoningEngine:
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.api_key = api_key or settings.openai_api_key
+        self.model = settings.openai_model
 
     def generate_report_sections(self, signals: Dict[str, Any], resume_text: str = "") -> Dict[str, Any]:
-        if not self.api_key or "your_openai_api_key_here" in self.api_key:
-            return self._get_fallback_response("AI API Key not provided or invalid.")
+        # Validation is now handled by settings, so we can proceed
 
         url = "https://api.openai.com/v1/chat/completions"
         headers = {

@@ -165,3 +165,4 @@ example_report.json
 
 .venv
 __pycache__/
+.env

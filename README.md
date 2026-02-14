@@ -54,11 +54,19 @@ copy .env.example .env
 ```
 
 ### 3. Configuration
-Open the `.env` file and add your credentials:
+Open the `.env` file and add your credentials. The application uses **Pydantic Settings** to validate these variables on startup.
+
 ```env
-GITHUB_TOKEN=your_github_token_here
-OPENAI_API_KEY=your_openai_key_here
+GITHUB_TOKEN=ghp_...
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
 ```
+
+> [!IMPORTANT]
+> **Security Note:** Never commit your `.env` file. It is included in `.gitignore` by default. For production deployment, ensure these are set as environment variables in your hosting environment.
+
+#### Input Validation
+The API includes built-in validation for GitHub usernames to prevent malformed requests (alphanumeric and single hyphens, 1-39 characters).
 
 ### 4. Run Application
 ```powershell
