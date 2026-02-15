@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, SecretStr
+from typing import Optional
 import os
 
 class Settings(BaseSettings):
@@ -13,12 +14,15 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    # Required API Keys (will throw error if missing)
+    # API Keys
     github_token: str = Field(..., validation_alias="GITHUB_TOKEN")
-    openai_api_key: str = Field(..., validation_alias="OPENAI_API_KEY")
+    openai_api_key: Optional[str] = Field(None, validation_alias="OPENAI_API_KEY")
+    blackbox_api_key: Optional[str] = Field(None, validation_alias="BLACKBOX_API_KEY")
 
-    # Optional Configuration
+    # AI Configuration
+    ai_provider: str = Field("openai", validation_alias="AI_PROVIDER") # 'openai' or 'blackbox'
     openai_model: str = Field("gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    blackbox_model: str = Field("blackboxai", validation_alias="BLACKBOX_MODEL")
 
 # Singleton instance for globally accessible settings
 settings = Settings()

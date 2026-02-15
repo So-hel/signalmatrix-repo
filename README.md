@@ -24,17 +24,17 @@
 
 - **Backend**: FastAPI (Python 3.10+)
 - **Frontend**: Vanilla HTML/CSS/JS (Modern Glassmorphism)
-- **API Integration**: GitHub REST API, OpenAI API (GPT-4o-mini)
+- **API Integration**: GitHub REST API, OpenAI API (GPT-4o-mini), Blackbox AI API
 - **Architecture**: 6-Layer Modular System
 
 ---
 
-## � Quick Start
+##  Quick Start
 
 ### 1. Prerequisites
 - Python 3.10+
 - GitHub Personal Access Token
-- OpenAI API Key
+- OpenAI API Key OR Blackbox AI API Key
 
 ### 2. Setup
 ```powershell
@@ -58,8 +58,15 @@ Open the `.env` file and add your credentials. The application uses **Pydantic S
 
 ```env
 GITHUB_TOKEN=ghp_...
+AI_PROVIDER=openai # or 'blackbox'
+
+# OpenAI Settings
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
+
+# Blackbox AI Settings
+BLACKBOX_API_KEY=sk-...
+BLACKBOX_MODEL=blackboxai
 ```
 
 > [!IMPORTANT]

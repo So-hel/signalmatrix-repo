@@ -4,14 +4,22 @@ from typing import Dict, Any
 from .config import settings
 
 class AIReasoningEngine:
-    def __init__(self, api_key: str = None):
-        self.api_key = api_key or settings.openai_api_key
-        self.model = settings.openai_model
+    def __init__(self):
+        self.provider = settings.ai_provider.lower()
+        
+        if self.provider == "blackbox":
+            self.api_key = settings.blackbox_api_key
+            self.model = settings.blackbox_model
+            self.url = "https://api.blackbox.ai/v1/chat/completions"
+        else:
+            self.api_key = settings.openai_api_key
+            self.model = settings.openai_model
+            self.url = "https://api.openai.com/v1/chat/completions"
 
     def generate_report_sections(self, signals: Dict[str, Any], resume_text: str = "") -> Dict[str, Any]:
-        # Validation is now handled by settings, so we can proceed
+        if not self.api_key:
+            return self._get_fallback_response(f"Missing API key for {self.provider}")
 
-        url = "https://api.openai.com/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -41,14 +49,24 @@ class AIReasoningEngine:
             "messages": [
                 {"role": "system", "content": "You are an expert technical recruiter and engineering manager."},
                 {"role": "user", "content": prompt}
-            ],
-            "response_format": {"type": "json_object"}
+            ]
         }
+        
+        # OpenAI requires response_format for JSON mode, Blackbox might not or might handle it differently
+        if self.provider == "openai":
+            payload["response_format"] = {"type": "json_object"}
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response = requests.post(self.url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             data = response.json()["choices"][0]["message"]["content"]
+            
+            # Clean up response if it contains markdown code blocks
+            if "```json" in data:
+                data = data.split("```json")[1].split("```")[0].strip()
+            elif "```" in data:
+                data = data.split("```")[1].split("```")[0].strip()
+                
             return json.loads(data)
         except Exception as e:
             error_msg = str(e)
@@ -58,11 +76,11 @@ class AIReasoningEngine:
             return self._get_fallback_response(error_msg)
 
     def _get_fallback_response(self, error_msg: str) -> Dict[str, Any]:
-        summary = "Error generating AI content."
-        if "insufficient_quota" in error_msg:
-            summary = "OpenAI Quota Exceeded. Please add credits to your OpenAI account for AI insights. Rule-based scoring is still available below."
-        elif "Invalid GitHub Token" in error_msg or "401" in error_msg:
-            summary = "Authentication failed. Check your API keys in the .env file."
+        summary = f"Error generating content with {self.provider}."
+        if "insufficient_quota" in error_msg or "429" in error_msg:
+            summary = f"{self.provider.capitalize()} Quota Exceeded. Please check your account credits. Rule-based scoring is still available below."
+        elif "authentication" in error_msg.lower() or "401" in error_msg:
+            summary = f"Authentication failed for {self.provider}. Check your API keys in the .env file."
 
         return {
             "error": error_msg,
