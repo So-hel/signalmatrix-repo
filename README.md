@@ -17,6 +17,7 @@
 - **🚩 Red Flag Detection**: Identifies issues like fork-heavy profiles or repetitive commits.
 - **🤖 AI Reasoning Engine**: Generates a professional Executive Summary and a 30-Day Improvement Roadmap.
 - **💎 Premium UI**: A glassmorphic, dark-mode dashboard with smooth animations.
+- **🔐 BYOT (Bring Your Own Token)**: Secure, frontend-based token management. Users can direct-paste their GitHub Personal Access Token (PAT) into the settings UI. The token is stored locally in the browser (`localStorage`) and never saved to our database.
 
 ---
 
@@ -55,6 +56,9 @@ copy .env.example .env
 
 ### 3. Configuration
 Open the `.env` file and add your credentials. The application uses **Pydantic Settings** to validate these variables on startup.
+
+> [!NOTE]
+> **GitHub Token**: You must provide a default token in `.env` to start the application. You can override this with your own token in the UI later.
 
 ```env
 GITHUB_TOKEN=ghp_...
