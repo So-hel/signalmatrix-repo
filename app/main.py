@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -15,7 +15,8 @@ from .config import settings
 app = FastAPI(title="SignalMatrix Repo")
 
 # Static files and templates
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# Mount the root 'static' folder to '/static' path
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -30,17 +31,24 @@ class AnalysisRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     try:
-        with open("app/static/index.html", "r") as f:
+        # Serve index.html from the root directory
+        with open("index.html", "r") as f:
             return f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Index file not found")
 
 @app.post("/api/analyze")
-async def analyze_profile(request: AnalysisRequest):
+async def analyze_profile(request: AnalysisRequest, authorization: Optional[str] = Header(None)):
     try:
         logger.info(f"Starting analysis for user: {request.username}")
         
-        collector = GitHubCollector()
+        # Extract token from Bearer header if present
+        token = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+            logger.info("Using provided GitHub token from client.")
+        
+        collector = GitHubCollector(token=token)
         
         # Layer 1: Data Collection
         user_data = collector.get_user(request.username)

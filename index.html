@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -90,16 +92,101 @@
 
             <div class="report-card">
                 <h2>30-Day Improvement Roadmap</h2>
-                <div id="roadmapContent" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"></div>
+                <div id="roadmapContent" class="grid"
+                    style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"></div>
             </div>
 
             <div style="text-align: center; margin-top: 2rem;">
-                <button onclick="window.location.reload()" style="background: var(--border-color);">New Analysis</button>
+                <button onclick="window.location.reload()" style="background: var(--border-color);">New
+                    Analysis</button>
+            </div>
+        </section>
+        <section class="settings-section" id="settingsSection"
+            style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <div class="form-group">
+                <label for="githubToken">GitHub Personal Access Token (Optional)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" id="githubToken" placeholder="Paste your token here..." autocomplete="off"
+                        spellcheck="false" style="flex-grow: 1;">
+                    <button id="saveTokenBtn" style="white-space: nowrap;">Save Token</button>
+                    <button id="clearTokenBtn"
+                        style="background: var(--danger-color); white-space: nowrap; display: none;">Clear</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    Token is stored <strong>only in your browser (LocalStorage)</strong>. It is never saved to our
+                    database.
+                </p>
+                <p id="tokenStatus" style="font-size: 0.8rem; color: var(--success-color); height: 1.2em;"></p>
             </div>
         </section>
     </div>
 
     <script>
+        const TOKEN_KEY = 'gh_token_local';
+        const MASKED_TOKEN = '********';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTokenState();
+        });
+
+        const tokenInput = document.getElementById('githubToken');
+        const saveBtn = document.getElementById('saveTokenBtn');
+        const clearBtn = document.getElementById('clearTokenBtn');
+        const statusMsg = document.getElementById('tokenStatus');
+
+        // Security: Prevent copy
+        tokenInput.addEventListener('copy', (e) => {
+            e.preventDefault();
+            alert('Copying the token is disabled for security.');
+        });
+
+        // Security: Prevent context menu
+        tokenInput.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        saveBtn.addEventListener('click', () => {
+            const token = tokenInput.value.trim();
+            if (!token) return;
+
+            // Simple validation to check if it looks like a token
+            if (!token.startsWith('gh') && token.length < 20) {
+                if (!confirm("This doesn't look like a standard GitHub token. Save anyway?")) return;
+            }
+
+            localStorage.setItem(TOKEN_KEY, token);
+            tokenInput.value = ''; // Clear strict value
+            loadTokenState();
+            showStatus('Token saved securely to browser LocalStorage!', 'success');
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to remove the token from this browser?')) {
+                localStorage.removeItem(TOKEN_KEY);
+                loadTokenState();
+                showStatus('Token removed from browser.', 'warning');
+            }
+        });
+
+        function loadTokenState() {
+            const storedToken = localStorage.getItem(TOKEN_KEY);
+            if (storedToken) {
+                // Show masked version
+                const last4 = storedToken.slice(-4);
+                tokenInput.placeholder = `Saved: ${MASKED_TOKEN}${last4}`;
+                saveBtn.innerText = 'Update Token';
+                clearBtn.style.display = 'block';
+            } else {
+                tokenInput.placeholder = 'Paste your token here...';
+                saveBtn.innerText = 'Save Token';
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        function showStatus(msg, type) {
+            statusMsg.innerText = msg;
+            statusMsg.style.color = type === 'success' ? 'var(--success-color)' : 'var(--warning-color)';
+            setTimeout(() => { statusMsg.innerText = ''; }, 3000);
+        }
+
         document.getElementById('analyzeBtn').addEventListener('click', async () => {
             const username = document.getElementById('username').value.trim();
             const resume_text = document.getElementById('resume').value.trim();
@@ -111,12 +198,21 @@
 
             // UI State Change
             document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('settingsSection').style.display = 'none'; // Hide settings during analysis
             document.getElementById('loading').style.display = 'block';
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+
+                // Retrieve token from LocalStorage if available
+                const storedToken = localStorage.getItem(TOKEN_KEY);
+                if (storedToken) {
+                    headers['Authorization'] = `Bearer ${storedToken}`;
+                }
+
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ username, resume_text })
                 });
 
@@ -130,6 +226,7 @@
             } catch (error) {
                 alert('Error: ' + error.message);
                 document.getElementById('inputSection').style.display = 'block';
+                document.getElementById('settingsSection').style.display = 'block';
                 document.getElementById('loading').style.display = 'none';
             }
         });
@@ -141,15 +238,15 @@
             // Score & Decision
             const scoreBadge = document.getElementById('scoreBadge');
             scoreBadge.innerText = data.overall_score;
-            scoreBadge.className = 'score-badge ' + 
-                (data.recruiter_decision === 'Strong Shortlist' ? 'strong' : 
-                 data.recruiter_decision === 'Borderline' ? 'borderline' : 'ready');
-            
+            scoreBadge.className = 'score-badge ' +
+                (data.recruiter_decision === 'Strong Shortlist' ? 'strong' :
+                    data.recruiter_decision === 'Borderline' ? 'borderline' : 'ready');
+
             document.getElementById('decisionLabel').innerText = data.recruiter_decision;
             document.getElementById('riskLabel').innerText = data.hiring_risk;
-            document.getElementById('riskLabel').style.color = 
-                data.hiring_risk === 'High' ? 'var(--danger-color)' : 
-                data.hiring_risk === 'Medium' ? 'var(--warning-color)' : 'var(--success-color)';
+            document.getElementById('riskLabel').style.color =
+                data.hiring_risk === 'High' ? 'var(--danger-color)' :
+                    data.hiring_risk === 'Medium' ? 'var(--warning-color)' : 'var(--success-color)';
 
             // Summaries
             document.getElementById('execSummary').innerText = data.executive_summary;
@@ -211,4 +308,5 @@
         }
     </script>
 </body>
+
 </html>
