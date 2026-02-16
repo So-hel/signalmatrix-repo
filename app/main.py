@@ -32,7 +32,7 @@ class AnalysisRequest(BaseModel):
 async def read_root():
     try:
         # Serve index.html from the root directory
-        with open("index.html", "r") as f:
+        with open("index.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Index file not found")

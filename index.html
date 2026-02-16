@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SignalMatrix Repo | GitHub Portfolio Analyzer</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -13,10 +13,36 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1>SignalMatrix Repo</h1>
-            <p>Where Recruiters See Beyond Commits</p>
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>SignalMatrix Repo</h1>
+                <p>Where Recruiters See Beyond Commits</p>
+            </div>
+            <button id="settingsToggleBtn"
+                style="background: transparent; border: 1px solid var(--border-color); padding: 0.5rem; cursor: pointer;"
+                title="Settings">
+                ⚙️
+            </button>
         </header>
+
+        <section class="settings-section" id="settingsSection"
+            style="margin-top: 1rem; border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; display: none; background: rgba(255, 255, 255, 0.05);">
+            <div class="form-group">
+                <label for="githubToken">GitHub Personal Access Token (Optional)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" id="githubToken" placeholder="Paste your token here..." autocomplete="off"
+                        spellcheck="false" style="flex-grow: 1;">
+                    <button id="saveTokenBtn" style="white-space: nowrap;">Save</button>
+                    <button id="clearTokenBtn"
+                        style="background: var(--danger-color); white-space: nowrap; display: none;">Clear</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    Token is stored <strong>only in your browser (LocalStorage)</strong>. It is never saved to our
+                    database.
+                </p>
+                <p id="tokenStatus" style="font-size: 0.8rem; color: var(--success-color); height: 1.2em;"></p>
+            </div>
+        </section>
 
         <section class="input-section" id="inputSection">
             <div class="form-group">
@@ -101,24 +127,7 @@
                     Analysis</button>
             </div>
         </section>
-        <section class="settings-section" id="settingsSection"
-            style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-            <div class="form-group">
-                <label for="githubToken">GitHub Personal Access Token (Optional)</label>
-                <div style="display: flex; gap: 0.5rem;">
-                    <input type="password" id="githubToken" placeholder="Paste your token here..." autocomplete="off"
-                        spellcheck="false" style="flex-grow: 1;">
-                    <button id="saveTokenBtn" style="white-space: nowrap;">Save Token</button>
-                    <button id="clearTokenBtn"
-                        style="background: var(--danger-color); white-space: nowrap; display: none;">Clear</button>
-                </div>
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                    Token is stored <strong>only in your browser (LocalStorage)</strong>. It is never saved to our
-                    database.
-                </p>
-                <p id="tokenStatus" style="font-size: 0.8rem; color: var(--success-color); height: 1.2em;"></p>
-            </div>
-        </section>
+
     </div>
 
     <script>
@@ -133,6 +142,16 @@
         const saveBtn = document.getElementById('saveTokenBtn');
         const clearBtn = document.getElementById('clearTokenBtn');
         const statusMsg = document.getElementById('tokenStatus');
+        const settingsSection = document.getElementById('settingsSection');
+        const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+
+        settingsToggleBtn.addEventListener('click', () => {
+            if (settingsSection.style.display === 'none') {
+                settingsSection.style.display = 'block';
+            } else {
+                settingsSection.style.display = 'none';
+            }
+        });
 
         // Security: Prevent copy
         tokenInput.addEventListener('copy', (e) => {

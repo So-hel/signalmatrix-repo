@@ -1,0 +1,28 @@
+
+# Valid environments
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+
+# Virtual environment
+.venv
+venv
+env
+
+# Tests
+tests
+pytest_cache
+
+# IDE specific
+.vscode
+.idea
